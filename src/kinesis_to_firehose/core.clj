@@ -40,15 +40,18 @@
 
 ;Generate string return json string in escaped format
 ;"\"{\"dog\":\"pig\"}\"" -> {"dog":"pig"}
-(defn cleanup-json-string-format [dirty-json]
+(defn- cleanup-json-string-format->byte-array [dirty-json]
   (let [json-safe-message (. StringEscapeUtils (unescapeJson dirty-json))
-        without-extra-quotes (string/replace json-safe-message #"(^\"?)(.*)(\"$?)" "$2")]
-    without-extra-quotes))
+        as-byte-array (.getBytes json-safe-message "UTF-8")
+        first-byte (first as-byte-array)]
+    (if (= first-byte 34)
+      (byte-array (drop-last (drop 1 as-byte-array)))
+      as-byte-array)))
 
 (defn- send-to-firehose [events streams]
   (let [records (map (fn [event]
                        (doto (Record.)
-                         (.setData (ByteBuffer/wrap (.getBytes (cleanup-json-string-format event) "UTF-8")))))
+                         (.setData (ByteBuffer/wrap (cleanup-json-string-format->byte-array event)))))
                      events)
         request (doto (PutRecordBatchRequest.)
                   (.setDeliveryStreamName (next-delivery-stream streams))
@@ -61,7 +64,7 @@
       :else {:succeeded (- (count events) failed-count)
              :failed failed-events})))
 
-(defn send-grouped-to-firehose [[{transform :transform streams :streams group-name :name} data]]
+(defn- send-grouped-to-firehose [[{transform :transform streams :streams group-name :name} data]]
   (let [transformed-data (map transform data)]
     (try
       (let [response (send-to-firehose transformed-data streams)]
@@ -69,7 +72,7 @@
       (catch Exception e
         (throw e)))))
 
-(defn group-by-matcher [events mappers]
+(defn- group-by-matcher [events mappers]
   (reduce (fn [m event]
             (let [dispatch-value ((:dispatch mappers) event)
                   matched (first (filter #(some #{dispatch-value} (:dispatch-value %)) (:rules mappers)))]
