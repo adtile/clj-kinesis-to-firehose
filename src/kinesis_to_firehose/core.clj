@@ -10,10 +10,10 @@
 
 (def client (AmazonKinesisFirehoseClient.))
 
-(defn send-request [^PutRecordBatchRequest request]
+(defn- send-request [^PutRecordBatchRequest request]
   (. client putRecordBatch request))
 
-(defn parse-failures [events responses]
+(defn- parse-failures [events responses]
   (let [failed-count (.getFailedPutCount responses)
         failed-events (->> (map vector events (.getRequestResponses responses))
                            (remove (fn [[_ response]] (empty? (.getErrorCode response))))
@@ -40,18 +40,19 @@
 
 ;Generate string return json string in escaped format
 ;"\"{\"dog\":\"pig\"}\"" -> {"dog":"pig"}
-(defn- cleanup-json-string-format->byte-array [dirty-json]
+(defn- cleanup-json-string-format [^String dirty-json]
   (let [json-safe-message (. StringEscapeUtils (unescapeJson dirty-json))
         as-byte-array (.getBytes json-safe-message "UTF-8")
-        first-byte (first as-byte-array)]
-    (if (= first-byte 34)
-      (byte-array (drop-last (drop 1 as-byte-array)))
-      as-byte-array)))
+        first-byte (first as-byte-array)
+        drop-quotes (fn [first-byte all-bytes] (if (= first-byte 34)
+                                                 (byte-array (drop-last (drop 1 all-bytes)))
+                                                 all-bytes))]
+    (String. (drop-quotes first-byte as-byte-array))))
 
-(defn- send-to-firehose [events streams]
+(defn send-to-firehose [events streams]
   (let [records (map (fn [event]
                        (doto (Record.)
-                         (.setData (ByteBuffer/wrap (cleanup-json-string-format->byte-array event)))))
+                         (.setData (ByteBuffer/wrap (.getBytes event)))))
                      events)
         request (doto (PutRecordBatchRequest.)
                   (.setDeliveryStreamName (next-delivery-stream streams))
@@ -65,7 +66,8 @@
              :failed failed-events})))
 
 (defn- send-grouped-to-firehose [[{transform :transform streams :streams group-name :name} data]]
-  (let [transformed-data (map transform data)]
+  (let [transform-and-fix (comp cleanup-json-string-format transform)
+        transformed-data (map transform-and-fix data)]
     (try
       (let [response (send-to-firehose transformed-data streams)]
         {group-name response})
