@@ -9,5 +9,6 @@
                  [com.amazonaws/aws-lambda-java-core "1.1.0"]
                  [com.amazonaws/aws-java-sdk-kinesis "1.10.28"]
                  [base64-clj "0.1.1"]]
+  :profiles {:dev {:dependencies [[clj-containment-matchers "1.0.1"]]}}
   :signing {:gpg-key "webmaster@adtile.me"}
   :aot [kinesis-to-firehose.core])
