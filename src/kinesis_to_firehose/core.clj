@@ -80,14 +80,16 @@
                   matched (first (filter #(some #{dispatch-value} (:dispatch-value %)) (:rules mappers)))]
               (if matched
                 (update m matched conj event)
-                m)))
+                (update m :unknown conj event))))
           {}
           events))
 
 (defn handle-batch [kinesis-batch mappers]
   (let [events (map #(-> % :kinesis :data (base64/decode)) (:Records kinesis-batch))
-        grouped-events (group-by-matcher events mappers)]
-    (assoc (into {} (map send-grouped-to-firehose grouped-events)) :skipped 0)))
+        grouped-events (group-by-matcher events mappers)
+        unmatched-events (get grouped-events :unknown [])
+        grouped-matched-events (dissoc grouped-events :unknown)]
+    (assoc (into {} (map send-grouped-to-firehose grouped-matched-events)) :skipped (count unmatched-events))))
 
 (defn kinesis->firehose! [is mappers]
   (let [result (-> (parse-stream (io/reader is) true)
