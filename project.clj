@@ -1,4 +1,4 @@
-(defproject kinesis-to-firehose "0.0.2"
+(defproject kinesis-to-firehose "0.1.0"
   :description "Kinesis to Firehose"
   :url "http://github.com/adtile/clj-kinesis-to-firehose"
   :license {:name "MIT License"
