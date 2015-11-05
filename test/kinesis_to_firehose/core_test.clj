@@ -36,6 +36,13 @@
      :transform (fn [event] (generate-string event))
      :streams ["stream://4"]}]})
 
+(def default-test-mappings
+  {:dispatch (fn [event] (:type (parse-string event true)))
+   :rules
+   [{:name :default-events
+     :dispatch-value :default
+     :transform (fn [event] (generate-string event))
+     :streams ["stream://5"]}]})
 
 (defn- fake-request [request]
   (doto (PutRecordBatchResult.)
@@ -49,6 +56,12 @@
                              (.setErrorMessage "Unknown"))
                            (PutRecordBatchResponseEntry.)])))
 
+
+(deftest sends-default-event-record-from-kinesis-to-firehose
+  (with-redefs [core/send-request fake-request]
+    (let [input-stream (events->kinesis-stream [sample-event-one])]
+      (is (equal? {:default-events {:succeeded 1 :failed 0} :skipped 0}
+             (kinesis->firehose! input-stream default-test-mappings))))))
 
 (deftest sends-record-from-kinesis-to-firehose
   (with-redefs [core/send-request fake-request]

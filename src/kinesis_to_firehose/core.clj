@@ -74,10 +74,19 @@
       (catch Exception e
         (throw e)))))
 
+(defn- matched-rule [dispatch-value rules]
+  (let [default? #(= :default (:dispatch-value %))
+        rules-without-default (remove default? rules)
+        default (first (filter default? rules))
+        matched (first (filter #(some #{dispatch-value} (:dispatch-value %)) rules-without-default))]
+    (if (and (nil? matched) default)
+      default
+      matched)))
+
 (defn- group-by-matcher [events mappers]
   (reduce (fn [m event]
             (let [dispatch-value ((:dispatch mappers) event)
-                  matched (first (filter #(some #{dispatch-value} (:dispatch-value %)) (:rules mappers)))]
+                  matched (matched-rule dispatch-value (:rules mappers))]
               (if matched
                 (update m matched conj event)
                 (update m :unknown conj event))))
