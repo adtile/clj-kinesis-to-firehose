@@ -11,7 +11,7 @@
 (def client (AmazonKinesisFirehoseClient.))
 
 (defn- send-request [^PutRecordBatchRequest request]
-  (. client putRecordBatch request))
+  (.putRecordBatch client request))
 
 (defn- parse-failures [events responses]
   (let [failed-count (.getFailedPutCount responses)
@@ -41,7 +41,7 @@
 ;Generate string return json string in escaped format
 ;"\"{\"dog\":\"pig\"}\"" -> {"dog":"pig"}
 (defn- cleanup-json-string-format [^String dirty-json]
-  (let [json-safe-message (. StringEscapeUtils (unescapeJson dirty-json))
+  (let [json-safe-message (StringEscapeUtils/unescapeJson dirty-json)
         as-byte-array (.getBytes json-safe-message "UTF-8")
         first-byte (first as-byte-array)
         drop-quotes (fn [first-byte all-bytes] (if (= first-byte 34)
@@ -60,7 +60,7 @@
         response (send-request request)
         [failed-count failed-events] (parse-failures events response)]
     (cond
-      (= 0 failed-count) {:succeeded (count events) :failed failed-count}
+      (zero? failed-count) {:succeeded (count events) :failed failed-count}
       (= (count events) failed-count) (throw-batch-failed-error failed-events)
       :else {:succeeded (- (count events) failed-count)
              :failed failed-events})))
