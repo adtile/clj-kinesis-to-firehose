@@ -7,3 +7,58 @@ Push events from Kinesis stream to Redshift or S3 Firehose
 ## Build status
 
 [![Build Status](https://travis-ci.org/adtile/clj-kinesis-to-firehose.svg)](https://travis-ci.org/adtile/clj-kinesis-to-firehose)
+
+## Installation
+
+Add the following to your `project.clj` `:dependencies`:
+
+```clojure
+[kinesis-to-firehose "0.1.1"]
+```
+
+## Usage
+
+### Lambda function exmplae with uswitch
+
+Simple lambda which read events in JSON format from kinesis and write them to different
+firehoses by type.
+
+```clojure
+
+(ns my-lambda.core
+  (:require [uswitch.lambada.core :refer [deflambdafn]]
+            [clojure.java.io :as io]
+            [cheshire.core :refer [generate-string parse-string generate-stream]]
+            [kinesis-to-firehose.core :refer [kinesis->firehose!]]))
+
+; Create map with
+; { :dispatch (fn which picks values for dispatch-value check)
+;   :rules [
+;     {:name :name-of-rule
+;      :dispatch-value #{"matches results for dispatch fn"} or :default
+;      :transform #(fn which prepares record for S3 or Redshift write)
+;      :streams ["vec of firehose streams"]}]
+(def my-kinesis-stream-mappings-and-transformations
+  {:dispatch (fn [event] (:type (cheshire.core/parse-string event true)))
+   :rules
+   [{:name :lol-cats
+     :dispatch-value #{"cat"}
+     :transform (fn [event] (cheshire.core/generate-string event))
+     :streams ["lol-cats-redshift-firehose-1" "lol-cats-redshift-firehose-2"]}
+    {:name :lol-dogs
+     :dispatch-value #{"dogs"}
+     :transform (fn [event] (cheshire.core/generate-string event))
+     :streams ["lol-dogs-s3-firehose"]}
+    {:name :all-the-rest-lol-things
+     :dispatch-value :default
+     :transform (fn [event] (cheshire.core/generate-string event))
+     :streams ["all-the-rest-lol-things-s3-firehose1"]}]})
+
+(deflambdafn my-lambda.LambdaFn [is os context]
+  (let [stream-writer (io/writer os)
+  	results (kinesis->firehose! is my-kinesis-stream-mappings-and-transformations)]
+    (generate-strean results stream-writer)
+    (.flush stream-writer)))
+
+```
+
