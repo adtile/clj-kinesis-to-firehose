@@ -2,7 +2,7 @@
 
 [![Clojars Project](http://clojars.org/kinesis-to-firehose/latest-version.svg)](http://clojars.org/kinesis-to-firehose)
 
-Push events from Kinesis stream to Redshift or S3 Firehose
+Push events from a Kinesis stream to a Redshift/S3 Firehose stream
 
 ## Build status
 
@@ -18,10 +18,10 @@ Add the following to your `project.clj` `:dependencies`:
 
 ## Usage
 
-### Lambda function exmplae with uswitch
+### Lambda function example with uswitch
 
-Simple lambda which read events in JSON format from kinesis and write them to different
-firehoses by type.
+Simple lambda function that reads events in JSON format from a Kinesis stream and writes them to different
+Firehoses based on it's type.
 
 ```clojure
 
@@ -31,13 +31,14 @@ firehoses by type.
             [cheshire.core :refer [generate-string parse-string generate-stream]]
             [kinesis-to-firehose.core :refer [kinesis->firehose!]]))
 
-; Create map with
+; Create a config map
 ; { :dispatch (fn which picks values for dispatch-value check)
 ;   :rules [
 ;     {:name :name-of-rule
 ;      :dispatch-value #{"matches results for dispatch fn"} or :default
 ;      :transform #(fn which prepares record for S3 or Redshift write)
 ;      :streams ["vec of firehose streams"]}]
+
 (def my-kinesis-stream-mappings-and-transformations
   {:dispatch (fn [event] (:type (cheshire.core/parse-string event true)))
    :rules
