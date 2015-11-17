@@ -52,7 +52,7 @@
 (defn send-to-firehose [events streams]
   (let [records (map (fn [event]
                        (doto (Record.)
-                         (.setData (ByteBuffer/wrap (.getBytes event)))))
+                         (.setData (ByteBuffer/wrap (.getBytes event "UTF-8")))))
                      events)
         request (doto (PutRecordBatchRequest.)
                   (.setDeliveryStreamName (next-delivery-stream streams))
@@ -101,6 +101,6 @@
     (assoc (into {} (map send-grouped-to-firehose grouped-matched-events)) :skipped (count unmatched-events))))
 
 (defn kinesis->firehose! [is mappers]
-  (let [result (-> (parse-stream (io/reader is) true)
+  (let [result (-> (parse-stream (io/reader is :encoding "UTF-8") true)
                    (handle-batch mappers))]
     result))

@@ -12,6 +12,6 @@
   (let [compile-kinesis-data (fn [event] (assoc-in kinesis-template [:kinesis :data] (encode (generate-string event))))
         records {"Records" (map compile-kinesis-data events)}]
     (-> (generate-string records)
-        (.getBytes)
+        (.getBytes "UTF-8")
         (ByteArrayInputStream.))))
 
