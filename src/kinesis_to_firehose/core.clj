@@ -47,7 +47,7 @@
         drop-quotes (fn [first-byte all-bytes] (if (= first-byte 34)
                                                  (byte-array (drop-last (drop 1 all-bytes)))
                                                  all-bytes))]
-    (String. (drop-quotes first-byte as-byte-array))))
+    (String. (drop-quotes first-byte as-byte-array) "UTF-8")))
 
 (defn send-to-firehose [events streams]
   (let [records (map (fn [event]
