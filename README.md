@@ -13,7 +13,7 @@ Push events from a Kinesis stream to a Redshift/S3 Firehose stream
 Add the following to your `project.clj` `:dependencies`:
 
 ```clojure
-[kinesis-to-firehose "0.1.1"]
+[kinesis-to-firehose "0.1.4"]
 ```
 
 ## Usage
@@ -62,4 +62,3 @@ Firehoses based on it's type.
     (.flush stream-writer)))
 
 ```
-
